@@ -1,0 +1,76 @@
+(function initVideoEvents() {
+  const timingPercent = 98; // 视频播放到98%时触发事件
+  const inlineOfferID = "offer-inline"; // 内联优惠元素的ID
+  const offerInPopupID = "offer-popup"; // 弹出优惠元素的ID
+
+  let video = document.querySelector("video");
+  if (video) {
+    console.log("video found on load:", video);
+    setupVideoEvents(video);
+  } else {
+    const observer = new MutationObserver((mutationsList) => {
+      mutationsList.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (node.tagName === "VIDEO") {
+              console.log("video added dynamically:", node);
+              video = node;
+              setupVideoEvents(video);
+              observer.disconnect(); // 停止观察
+            }
+          });
+        }
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function setupVideoEvents(video) {
+    // 获取DOM元素
+    const inlineOfferEl = document.getElementById(inlineOfferID);
+    const popupEl = document.getElementById(offerInPopupID);
+    const popupCloseButton = document.querySelector("#offer-popup > button");
+
+    // 统一处理跳转逻辑
+    const handleRedirect = () => {
+      window.open(popupRedirectURL, "_blank");
+      hideOfferInPopup();
+    };
+
+    // 显示/隐藏函数
+    const showInlineOffer = () => inlineOfferEl && (inlineOfferEl.hidden = false);
+    const showOfferInPopup = () => popupEl && popupEl.showModal();
+    const hideOfferInPopup = () => popupEl && popupEl.close();
+
+    // 设置弹窗事件
+    if (popupEl) {
+      // 关闭按钮事件
+      if (popupCloseButton) {
+        popupCloseButton.addEventListener("click", (e) => {
+          e.stopPropagation();
+          handleRedirect();
+        });
+      }
+
+      // 蒙版点击事件
+      popupEl.addEventListener("click", (e) => {
+        if (!popupCloseButton || e.target !== popupCloseButton) {
+          handleRedirect();
+        }
+      });
+    }
+
+    // 视频事件监听
+    video.addEventListener("timeupdate", () => {
+      const triggerTime = video.duration * (timingPercent / 100);
+      if (video.currentTime > triggerTime) {
+        showInlineOffer();
+      }
+    });
+
+    video.addEventListener("ended", () => {
+      showInlineOffer();
+      showOfferInPopup();
+    });
+  }
+})();
